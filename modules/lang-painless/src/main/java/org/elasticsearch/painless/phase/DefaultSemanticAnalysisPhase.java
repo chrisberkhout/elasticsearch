@@ -1581,10 +1581,6 @@ public class DefaultSemanticAnalysisPhase extends UserTreeBaseVisitor<SemanticSc
 
         TargetType targetType = semanticScope.getDecoration(userElvisNode, TargetType.class);
 
-        if (targetType != null && targetType.targetType().isPrimitive()) {
-            throw userElvisNode.createError(new IllegalArgumentException("Elvis operator cannot return primitives"));
-        }
-
         AExpression userLeftNode = userElvisNode.getLeftNode();
         semanticScope.setCondition(userLeftNode, Read.class);
         semanticScope.copyDecoration(userElvisNode, userLeftNode, TargetType.class);
@@ -1619,7 +1615,7 @@ public class DefaultSemanticAnalysisPhase extends UserTreeBaseVisitor<SemanticSc
 
         Class<?> valueType;
 
-        if (targetType == null) {
+        if (targetType == null || targetType.targetType().isPrimitive()) {
             Class<?> promote = AnalyzerCaster.promoteConditional(leftValueType, rightValueType);
 
             semanticScope.putDecoration(userLeftNode, new TargetType(promote));

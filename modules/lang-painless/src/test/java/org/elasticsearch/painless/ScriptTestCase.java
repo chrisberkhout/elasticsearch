@@ -111,6 +111,12 @@ public abstract class ScriptTestCase extends ESTestCase {
         assertTrue("bytecode not found, got: \n" + asm, asm.matches(pattern));
     }
 
+    /** Checks a specific exception class is thrown (boxed inside ScriptException) and checks its message. */
+    public static <T extends Throwable> void expectScriptThrows(Class<T> expectedType, ThrowingRunnable runnable, String message) {
+        T e = expectScriptThrows(expectedType, true, runnable);
+        assertEquals(message, e.getMessage());
+    }
+
     /** Checks a specific exception class is thrown (boxed inside ScriptException) and returns it. */
     public static <T extends Throwable> T expectScriptThrows(Class<T> expectedType, ThrowingRunnable runnable) {
         return expectScriptThrows(expectedType, true, runnable);

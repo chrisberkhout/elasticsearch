@@ -17,16 +17,40 @@ import static org.hamcrest.Matchers.lessThan;
  * Tests for the Elvis operator ({@code ?:}).
  */
 public class ElvisTests extends ScriptTestCase {
+    @SuppressWarnings("checkstyle:LineLength")
     public void testBasics() {
+
+        // Extra tests comparing with conditional, assigning to a primitive
+
+        assertEquals(1, exec("int i = params.a != null ? params.a : 1; return i")); // conditional right: ok
+        assertEquals(1, exec("int i = params.a ?: 1; return i")); // elvis right: now ok, was IllegalArgumentException: Elvis operator cannot return primitives
+
+        expectScriptThrows(ClassCastException.class, () -> exec("Integer a = Integer.valueOf(1); int b = a != null ? a : 2; return b"), "Cannot cast from [java.lang.Integer] to [int]."); // conditional
+        expectScriptThrows(ClassCastException.class, () -> exec("Integer a = Integer.valueOf(1); int b = a ?: 2; return b"), "Cannot cast from [int] to [java.lang.Object]."); // elvis
+
+        expectScriptThrows(ClassCastException.class, () -> exec("Integer a = Integer.valueOf(1); int b = a != null ? a : Integer.valueOf(2); return b"), "Cannot cast from [java.lang.Integer] to [int]."); // conditional
+        expectScriptThrows(ClassCastException.class, () -> exec("Integer a = Integer.valueOf(1); int b = a ?: Integer.valueOf(2); return b"), "Cannot cast from [java.lang.Integer] to [int]."); // elvis
+
+        // Extra tests comparing with conditional, explicit casting
+
+        assertEquals(1, exec("(int)(params.a != null ? params.a : 1)")); // conditional right primitive cast: ok
+        assertEquals(1, exec("return (int)(params.a ?: 1)")); // elvis right primitive cast: now ok, was IllegalArgumentException: Elvis operator cannot return primitives
+
+        // Extra tests comparing with conditional, other
+
+        assertEquals(2, exec("def arr = ['v': 2]; int i = arr.v != null ? arr.v : 1; return i")); // conditional left primitive: ok
+        expectScriptThrows(IllegalArgumentException.class, () -> exec("def arr = ['v': 2]; int i = arr.v ?: 1; return i"), "Extraneous elvis operator. LHS is a primitive."); // elvis left primitive
+
+        assertEquals(2, exec("def arr = ['v': ['v': 2]]; int i = arr.v?.v != null ? arr.v?.v : 1; return i")); // conditional left null-safe: ok
+        assertEquals(2, exec("def arr = ['v': ['v': 2]]; int i = arr.v?.v ?: 1; return i")); // elvis left null-safe: ok
+
+
         // Basics
         assertEquals("str", exec("return params.a ?: 'str'"));
         assertEquals("str", exec("return params.a ?: 'str2'", singletonMap("a", "str"), true));
         assertEquals("str", exec("return params.a ?: 'asdf'", singletonMap("a", "str"), true));
 
         // Assigning to a primitive
-        assertCannotReturnPrimitive("int i = params.a ?: 1; return i");
-        assertCannotReturnPrimitive("Integer a = Integer.valueOf(1); int b = a ?: 2; return b");
-        assertCannotReturnPrimitive("Integer a = Integer.valueOf(1); int b = a ?: Integer.valueOf(2); return b");
         assertEquals(2, exec("int i = (params.a ?: Integer.valueOf(2)).intValue(); return i"));
         assertEquals(1, exec("int i = (params.a ?: Integer.valueOf(2)).intValue(); return i", singletonMap("a", 1), true));
         assertEquals(1, exec("Integer a = Integer.valueOf(1); int b = (a ?: Integer.valueOf(2)).intValue(); return b"));
@@ -41,7 +65,6 @@ public class ElvisTests extends ScriptTestCase {
         // Explicit casting
         assertEquals(1, exec("return (Integer)(params.a ?: Integer.valueOf(1))"));
         assertEquals(1, exec("return (Integer)(params.a ?: Integer.valueOf(2))", singletonMap("a", 1), true));
-        assertCannotReturnPrimitive("return (int)(params.a ?: 1)");
 
         // Now some chains
         assertEquals(1, exec("return params.a ?: params.a ?: 1"));
